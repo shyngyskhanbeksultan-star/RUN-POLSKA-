@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#12152a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Беги, Польша!</title>
+<style>
+:root{--ink:#f6f0ee;--red:#e0163f;--night:#12152a;--gold:#ffd36b;color-scheme:dark;box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--night);overflow:hidden;touch-action:none;color:var(--ink);font-family:"Trebuchet MS",Verdana,sans-serif;-webkit-user-select:none;user-select:none}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+#hud{position:fixed;left:0;right:0;top:0;display:flex;justify-content:space-between;padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 0;font-size:20px;font-weight:700;text-shadow:0 2px 6px #000;pointer-events:none}
+#bar{position:fixed;left:16px;right:16px;top:calc(env(safe-area-inset-top,0px) + 48px);height:8px;border-radius:4px;background:#0006;overflow:hidden;pointer-events:none}
+#st{display:block;height:100%;width:100%;background:var(--gold);transition:background .2s}
+#msg{position:fixed;left:0;right:0;top:30%;text-align:center;font-size:26px;font-weight:800;color:var(--gold);text-shadow:0 3px 10px #000;opacity:0;transition:opacity .25s;pointer-events:none;padding:0 20px}
+#joy{position:fixed;left:calc(env(safe-area-inset-left,0px) + 22px);bottom:calc(env(safe-area-inset-bottom,0px) + 28px);width:140px;height:140px;border-radius:50%;background:#ffffff18;border:2px solid #ffffff40;touch-action:none}
+#knob{position:absolute;left:50%;top:50%;width:56px;height:56px;border-radius:50%;background:#ffffffcc;transform:translate(-50%,-50%)}
+#dash{position:fixed;right:calc(env(safe-area-inset-right,0px) + 24px);bottom:calc(env(safe-area-inset-bottom,0px) + 44px);width:104px;height:104px;border-radius:50%;border:3px solid var(--ink);background:var(--red);color:#fff;font:700 18px "Trebuchet MS",Verdana,sans-serif;touch-action:none}
+#dash:active{filter:brightness(1.2)}
+#ov{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;background:#0b0d1bd9}
+#ov h1{margin:0;font-size:clamp(46px,14vw,92px);line-height:.95;letter-spacing:-1px}
+#ov h1 span{color:var(--red)}
+#ov p{margin:0;max-width:460px;font-size:17px;line-height:1.45;color:#e4dcdc}
+#install{display:none;padding:12px 22px;font:700 17px "Trebuchet MS",Verdana,sans-serif;border:2px solid var(--gold);border-radius:30px;background:#252941;color:var(--gold)}
+#go{margin-top:6px;padding:16px 44px;font:800 22px "Trebuchet MS",Verdana,sans-serif;border:0;border-radius:40px;background:var(--red);color:#fff}
+.hide{display:none!important}
+#lv{font-size:18px;opacity:.9}
+#fire{position:fixed;right:calc(env(safe-area-inset-right,0px) + 144px);bottom:calc(env(safe-area-inset-bottom,0px) + 56px);width:88px;height:88px;border-radius:50%;border:3px solid var(--gold);background:#2a2d40;color:var(--gold);font:700 17px "Trebuchet MS",Verdana,sans-serif;touch-action:none}
+#cmd{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 70px);display:flex;gap:8px;z-index:5}
+#cmd input{flex:1;min-width:0;padding:12px 14px;font-size:18px;border-radius:12px;border:2px solid var(--ink);background:#0b0d1bf2;color:var(--ink);-webkit-user-select:text;user-select:text}
+#cmd button,#cheat button{padding:12px 14px;font:700 17px "Trebuchet MS",Verdana,sans-serif;border:0;border-radius:12px;background:var(--red);color:#fff}
+#cheat{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 70px);z-index:5;padding:14px;border-radius:18px;background:#12152af5;border:2px solid var(--gold);display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#cheat h2{grid-column:1/3;margin:0 0 4px;font-size:19px;color:var(--gold)}
+#cheat button.x{grid-column:1/3;background:#3a3d55}
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="hud"><div id="pir">Пироги 0/5</div><div id="lv">Уровень 1/5</div><div id="tm">0:00</div></div>
+<div id="bar"><i id="st"></i></div>
+<div id="msg"></div>
+<div id="joy"><b id="knob"></b></div>
+<button id="dash">Рывок</button>
+<button id="fire" class="hide">Огонь</button>
+<div id="cmd" class="hide"><input id="cin" placeholder="Введи команду" autocomplete="off" autocapitalize="off"><button id="cok">OK</button></div>
+<div id="cheat" class="hide"></div>
+<div id="ov"><h1 id="t1">Беги,<br><span>Польша!</span></h1>
+<p id="t2">Reichtangle гонится за Польшей. Собери 5 пирогов, найди выход и не дай себя поймать.</p>
+<p id="t3">Джойстик слева, «Рывок» справа. Шар поворачивается туда, куда ведёт джойстик. Клавиатура: WASD, Shift, F. Админ: дважды коснись Польши и введи команду.</p>
+<button id="go">Играть</button><button id="install" type="button">Установить игру</button></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const R=new THREE.WebGLRenderer({canvas:$('c'),antialias:true});
+R.setPixelRatio(Math.min(devicePixelRatio||1,2));
+const S=new THREE.Scene();S.background=new THREE.Color(0x1b1e33);S.fog=new THREE.Fog(0x1b1e33,30,85);
+const cam=new THREE.PerspectiveCamera(55,1,.1,200);
+function rs(){R.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}
+addEventListener('resize',rs);rs();
+S.add(new THREE.HemisphereLight(0xa5b5ff,0x30222a,.95));
+const sun=new THREE.DirectionalLight(0xffc89a,.85);sun.position.set(-20,40,10);S.add(sun);
+
+// ---------- countryball faces: flat half-moon eyes, no pupils ----------
+const blackM=new THREE.MeshBasicMaterial({color:0x000000,side:THREE.DoubleSide});
+const whiteM=new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide});
+function eye(r,slant){
+  const sh=new THREE.Shape();sh.absarc(0,0,r,Math.PI,2*Math.PI,false);sh.lineTo(-r,0);
+  const g=new THREE.Group(),geo=new THREE.ShapeGeometry(sh);
+  const o=new THREE.Mesh(geo,blackM);o.scale.set(1.22,1.22,1);o.position.y=r*.08;
+  const w=new THREE.Mesh(geo,whiteM);w.position.z=.012;
+  g.add(o,w);g.rotation.z=slant;return g;
+}
+function addFace(parent,Rr,er,spread,yy,slant){
+  for(const s of [-1,1]){
+    const x=s*spread,z=Math.sqrt(Rr*Rr-x*x-yy*yy)+.02;
+    const g=eye(er,s*slant);const wrap=new THREE.Group();
+    wrap.position.set(x,yy,z);wrap.rotation.order='YXZ';
+    wrap.rotation.y=Math.asin(x/Math.hypot(x,z));wrap.rotation.x=-Math.asin(yy/Rr);
+    wrap.add(g);parent.add(wrap);
+  }
+}
+function blob(r){const m=new THREE.Mesh(new THREE.CircleGeometry(r,24),new THREE.MeshBasicMaterial({color:0,transparent:true,opacity:.38}));m.rotation.x=-Math.PI/2;m.position.y=.04;return m}
+
+// Poland
+const pl=new THREE.Group(),pb=new THREE.Group();
+{
+  const c=document.createElement('canvas');c.width=256;c.height=256;const g=c.getContext('2d');
+  g.fillStyle='#fdfdfd';g.fillRect(0,0,256,128);g.fillStyle='#dc143c';g.fillRect(0,128,256,128);
+  const body=new THREE.Mesh(new THREE.SphereGeometry(1,40,28),new THREE.MeshLambertMaterial({map:new THREE.CanvasTexture(c)}));
+  body.scale.set(1,.9,1);pb.add(body);addFace(pb,1,.3,.36,.12,.28);
+  pl.add(pb,blob(1.1));S.add(pl);
+}
+// pickups + exit
+const pick=[];
+const pg=new THREE.SphereGeometry(.55,16,10),pm=new THREE.MeshLambertMaterial({color:0xf2d49b,emissive:0x7a5a10});
+const gm=new THREE.MeshBasicMaterial({color:0xffd36b,transparent:true,opacity:.28,blending:THREE.AdditiveBlending,depthWrite:false});
+function mkPick(p){const g=new THREE.Group(),m=new THREE.Mesh(pg,pm);m.scale.set(1.2,.5,1);g.add(m,new THREE.Mesh(new THREE.SphereGeometry(.95,12,8),gm));g.position.set(p.x,1.1,p.z);S.add(g);return g}
+const portal=new THREE.Group();
+{
+  const bm=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.22,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide});
+  portal.add(new THREE.Mesh(new THREE.CylinderGeometry(2,2,40,24,1,true),bm));
+  const r=new THREE.Mesh(new THREE.TorusGeometry(2,.2,10,32),new THREE.MeshBasicMaterial({color:0xe0163f}));r.rotation.x=Math.PI/2;r.position.y=.3;portal.add(r);
+  portal.visible=false;S.add(portal);
+}
+
+// ---------- audio ----------
+let ac;function beep(f,d,ty,v){try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain();o.type=ty||'sine';o.frequency.value=f;g.gain.value=v||.08;g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
+
+
+// ---------- world ----------
+const SKY=[0x1b1e33,0x2a1b33,0x1b2f2a,0x33231b,0x2b0e12],worldObjs=[];let obs=[];
+const gr=new THREE.Mesh(new THREE.PlaneGeometry(76,76),new THREE.MeshLambertMaterial({color:0x303541}));gr.rotation.x=-Math.PI/2;S.add(gr);
+const grid=new THREE.GridHelper(68,34,0x586079,0x3b4153);grid.position.y=.02;S.add(grid);
+const wallM=new THREE.MeshLambertMaterial({color:0x1f2230});
+[[0,-35.5,76,1],[0,35.5,76,1],[-35.5,0,1,76],[35.5,0,1,76]].forEach(([x,z,w,d])=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,3,d),wallM);m.position.set(x,1.5,z);S.add(m)});
+const brick=[0x7a3b32,0x6a4638,0x8a4a3a,0x5d3a3a];
+function addBox(x,z,w,d,h,c){const m=new THREE.Mesh(new THREE.BoxGeometry(w*2,h,d*2),new THREE.MeshLambertMaterial({color:c}));m.position.set(x,h/2,z);
+  const r=new THREE.Mesh(new THREE.BoxGeometry(w*2+.4,.4,d*2+.4),new THREE.MeshLambertMaterial({color:0x22242d}));r.position.set(x,h+.2,z);S.add(m,r);worldObjs.push(m,r);obs.push({x,z,w,d})}
+function buildWorld(L){
+  worldObjs.forEach(m=>S.remove(m));worldObjs.length=0;obs=[];
+  S.background.setHex(SKY[L-1]);S.fog.color.setHex(SKY[L-1]);
+  let seed=L*977+5;const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647};
+  for(let i=0;i<10+L*2;i++){let x,z,k=0;
+    do{x=(rnd()-.5)*58;z=(rnd()-.5)*58;k++}while(k<50&&(Math.hypot(x,z-24)<9||obs.some(o=>Math.abs(o.x-x)<o.w+6&&Math.abs(o.z-z)<o.d+6)));
+    addBox(x,z,2+rnd()*2.2,2+rnd()*2.2,4+rnd()*6,brick[i%4]);}
+}
+function push(p,rad){for(const o of obs){const cx=Math.max(o.x-o.w,Math.min(p.x,o.x+o.w)),cz=Math.max(o.z-o.d,Math.min(p.z,o.z+o.d)),dx=p.x-cx,dz=p.z-cz,d2=dx*dx+dz*dz;
+  if(d2<rad*rad){if(d2>1e-6){const d=Math.sqrt(d2);p.x=cx+dx/d*rad;p.z=cz+dz/d*rad}else p.x+=rad}}
+  p.x=Math.max(-34,Math.min(34,p.x));p.z=Math.max(-34,Math.min(34,p.z))}
+function freeSpot(f){for(let k=0;k<300;k++){const x=(Math.random()-.5)*60,z=(Math.random()-.5)*60;
+  if(obs.some(o=>Math.abs(x-o.x)<o.w+2.5&&Math.abs(z-o.z)<o.d+2.5))continue;
+  if(f&&Math.hypot(x-f.x,z-f.z)<f.r)continue;return{x,z}}return{x:0,z:-20}}
+
+// ---------- models ----------
+const reichTex=(()=>{const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');g.fillStyle='#d90000';g.fillRect(0,0,256,256);
+  const band=(x,y,w,h)=>{g.fillStyle='#fff';g.fillRect(x-2,y-2,w+4,h+4);g.fillStyle='#000';g.fillRect(x+4,y+4,w-8,h-8)};band(0,100,256,56);band(100,0,56,256);
+  g.fillStyle='#fff';g.beginPath();g.arc(128,128,50,0,7);g.fill();g.strokeStyle='#000';g.lineWidth=7;g.beginPath();g.arc(128,128,44,0,7);g.stroke();return new THREE.CanvasTexture(c)})();
+function makeReich(){const g=new THREE.Group(),b=new THREE.Group();
+  const box=new THREE.Mesh(new THREE.BoxGeometry(2.6,3.2,1.8),new THREE.MeshLambertMaterial({map:reichTex}));
+  box.add(new THREE.LineSegments(new THREE.EdgesGeometry(box.geometry),new THREE.LineBasicMaterial({color:0})));
+  const f=new THREE.Group();f.position.set(0,.5,.91);for(const s of[-1,1]){const e=eye(.42,s*.34);e.position.x=s*.6;f.add(e)}
+  box.add(f);b.add(box);b.position.y=1.6;g.add(b,blob(1.9));S.add(g);return{g,b}}
+const mR=makeReich();
+const tank=new THREE.Group();
+{const hull=new THREE.Mesh(new THREE.BoxGeometry(3,.9,4.2),new THREE.MeshLambertMaterial({color:0x4a5a3a}));hull.position.y=.75;tank.add(hull);
+ const tm=new THREE.MeshLambertMaterial({color:0x22251f});for(const s of[-1,1]){const t=new THREE.Mesh(new THREE.BoxGeometry(.7,.9,4.6),tm);t.position.set(s*1.6,.55,0);tank.add(t)}
+ const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,64,32);g.fillStyle='#dc143c';g.fillRect(0,32,64,32);
+ const tur=new THREE.Group();tur.position.y=1.7;tur.add(new THREE.Mesh(new THREE.SphereGeometry(.95,24,16),new THREE.MeshLambertMaterial({map:new THREE.CanvasTexture(c)})));addFace(tur,.95,.26,.33,.12,.28);
+ const bar=new THREE.Mesh(new THREE.CylinderGeometry(.14,.18,2.8,10),tm);bar.rotation.x=Math.PI/2;bar.position.set(0,1.75,2.1);tank.add(tur,bar,blob(2.4));S.add(tank)}
+const M=c=>new THREE.MeshLambertMaterial({color:c});
+const ak=new THREE.Group();
+[[.18,.2,1.2,0,0,0,0x2a2a2e],[.1,.1,.9,0,.02,.95,0x111111],[.17,.22,.5,0,-.03,-.75,0x7a4a24],[.15,.5,.2,0,-.35,.2,0x1a1a1a,.25],[.14,.3,.14,0,-.25,-.25,0x7a4a24],[.2,.12,.5,0,.15,.3,0x3a3a40]]
+ .forEach(([w,h,d,x,y,z,c,rx])=>{const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c));b.position.set(x,y,z);if(rx)b.rotation.x=rx;ak.add(b)});
+const baz=new THREE.Group();
+{const t=new THREE.Mesh(new THREE.CylinderGeometry(.22,.26,2.4,14),M(0x4b5d3a));t.rotation.x=Math.PI/2;
+ const c=new THREE.Mesh(new THREE.CylinderGeometry(.33,.22,.4,14),M(0x2c3a24));c.rotation.x=Math.PI/2;c.position.z=-1.3;
+ const r=new THREE.Mesh(new THREE.ConeGeometry(.2,.5,12),new THREE.MeshLambertMaterial({color:0xff7a1a,emissive:0x552200}));r.rotation.x=Math.PI/2;r.position.z=1.4;baz.add(t,c,r)}
+ak.position.set(1.3,.95,.3);baz.position.set(1.3,1,.3);pl.add(ak,baz);
+const EN=[];
+for(let i=0;i<3;i++){const m=makeReich(),bar=new THREE.Group();bar.rotation.order='YXZ';
+  const fl=new THREE.Mesh(new THREE.PlaneGeometry(2.5,.2),new THREE.MeshBasicMaterial({color:0xff3a3a}));fl.position.z=.01;
+  bar.add(new THREE.Mesh(new THREE.PlaneGeometry(2.6,.28),new THREE.MeshBasicMaterial({color:0})),fl);bar.position.y=4.3;m.g.add(bar);
+  EN.push({...m,bar,fl,x:0,z:0,hp:1,max:1,ph:0,tm:0,ct:6,dir:{x:0,z:1},dead:0,on:false,flash:0})}
+
+// ---------- input ----------
+const keys={};let dashHeld=false,fireHeld=false,jx=0,jz=0,jid=null;
+const typing=e=>e.target&&e.target.tagName==='INPUT';
+addEventListener('keydown',e=>{if(typing(e))return;keys[e.code]=1;if(e.code==='ShiftLeft'||e.code==='Space')dashHeld=true;if(e.code==='KeyF')fireHeld=true});
+addEventListener('keyup',e=>{keys[e.code]=0;if(e.code==='ShiftLeft'||e.code==='Space')dashHeld=false;if(e.code==='KeyF')fireHeld=false});
+const joy=$('joy'),knob=$('knob');
+function mv(e){const r=joy.getBoundingClientRect();let x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2;const m=r.width*.35,l=Math.hypot(x,y);if(l>m){x*=m/l;y*=m/l}jx=x/m;jz=y/m;knob.style.transform=`translate(calc(-50% + ${x}px),calc(-50% + ${y}px))`}
+joy.addEventListener('pointerdown',e=>{jid=e.pointerId;joy.setPointerCapture(jid);mv(e)});
+joy.addEventListener('pointermove',e=>{if(e.pointerId===jid)mv(e)});
+const jup=e=>{if(e.pointerId===jid){jid=null;jx=jz=0;knob.style.transform='translate(-50%,-50%)'}};
+joy.addEventListener('pointerup',jup);joy.addEventListener('pointercancel',jup);
+const hold=(el,f)=>{el.addEventListener('pointerdown',e=>{f(true);el.setPointerCapture(e.pointerId)});['pointerup','pointercancel'].forEach(n=>el.addEventListener(n,()=>f(false)))};
+hold($('dash'),v=>dashHeld=v);hold($('fire'),v=>fireHeld=v);
+
+// ---------- state ----------
+let state='menu',Lv=1,T=0,P={x:0,z:24},V={x:0,z:0},face=Math.PI,stam=1,tired=false,got=0,NP=4,base=5,boost=0,
+    form='ball',weapon=null,cd=0,paused=false,portalOn=false,act='start',msgT,lt=0;
+function say(t,ms){const m=$('msg');m.textContent=t;m.style.opacity=1;clearTimeout(msgT);msgT=setTimeout(()=>m.style.opacity=0,ms||1400)}
+const rad=()=>form==='ball'?.9:form==='reich'?1.5:1.7;
+function applyForm(){pl.visible=form==='ball';mR.g.visible=form==='reich';tank.visible=form==='tank';
+  ak.visible=form==='ball'&&weapon==='ak';baz.visible=form==='ball'&&weapon==='baz';
+  $('fire').classList.toggle('hide',!(form==='tank'||(form==='ball'&&weapon)))}
+function give(w){form='ball';weapon=w;applyForm();say(w==='ak'?'AK-47 призван':w==='baz'?'Базука призвана':'Оружие убрано',1200)}
+function setForm(f){form=f;if(f!=='ball')weapon=null;applyForm();say(f==='reich'?'Ты Reichtangle: враги не страшны':f==='tank'?'Танк! Огонь по Reichtangle':'Обычная Польша',1400)}
+
+// ---------- levels ----------
+function startLevel(L){
+  Lv=L;buildWorld(L);T=0;P={x:0,z:24};V={x:0,z:0};face=Math.PI;stam=1;tired=false;got=0;NP=3+L;base=4.8+.55*L;boost=0;portalOn=false;portal.visible=false;
+  pick.forEach(p=>S.remove(p));pick.length=0;for(let i=0;i<NP;i++)pick.push(mkPick(freeSpot({x:0,z:24,r:8})));
+  const n=[1,1,2,2,3][L-1];
+  EN.forEach((e,i)=>{e.on=i<n;e.g.visible=e.on;if(e.on){const s=freeSpot({x:P.x,z:P.z,r:28});e.x=s.x;e.z=s.z;e.max=e.hp=120+60*L;e.ph=0;e.ct=5+i*2;e.dead=0;e.flash=0}});
+  $('pir').textContent='Пироги 0/'+NP;$('lv').textContent='Уровень '+L+'/5';applyForm();state='play';$('ov').classList.add('hide');
+}
+const fm=s=>Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');
+function end(win){
+  state='over';let best=0;
+  try{const b=+localStorage.getItem('pl_best')||0;best=b;if(win&&Lv===5&&(!b||T<b)){localStorage.setItem('pl_best',T);best=T}}catch(e){}
+  if(win&&Lv<5){act='next';$('t1').innerHTML='Уровень '+Lv+'<br><span>пройден!</span>';$('t2').textContent='Время: '+fm(T)+'. Дальше сложнее.';$('go').textContent='Дальше'}
+  else if(win){act='restart';$('t1').innerHTML='Польша<br><span>победила!</span>';$('t2').textContent='Все 5 уровней пройдены. Время последнего: '+fm(T)+(best?'. Лучшее: '+fm(best):'');$('go').textContent='Сначала'}
+  else{act='retry';$('t1').innerHTML='Поймали!';$('t2').textContent='Reichtangle догнал Польшу. Собрано пирогов: '+got+' из '+NP+'.';$('go').textContent='Ещё раз'}
+  $('t3').textContent='';$('ov').classList.remove('hide');beep(win?660:110,.5,win?'triangle':'sawtooth',.12);
+}
+$('go').addEventListener('click',()=>{beep(440,.15,'triangle');startLevel(act==='next'?Lv+1:act==='restart'?1:Lv)});
+
+// ---------- combat ----------
+const bl=[],booms=[],bgm=new THREE.SphereGeometry(1,16,12);
+const bgeo=new THREE.BoxGeometry(.12,.12,.7),rgeo=new THREE.CylinderGeometry(.14,.14,.9,8).rotateX(Math.PI/2);
+const bmat=new THREE.MeshBasicMaterial({color:0xffe27a}),rmat=new THREE.MeshBasicMaterial({color:0xff8a2a});
+function boom(x,z,r,c){const m=new THREE.Mesh(bgm,new THREE.MeshBasicMaterial({color:c||0xffaa33,transparent:true,opacity:.8,blending:THREE.AdditiveBlending,depthWrite:false}));m.position.set(x,1,z);S.add(m);booms.push({m,t:0,r})}
+function hurt(e,d){if(!e.on||e.dead>0)return;e.hp-=d;e.flash=.15;
+  if(e.hp<=0){e.dead=6;e.g.visible=false;boom(e.x,e.z,3.5);beep(80,.4,'sawtooth',.12);say('Reichtangle повержен! Вернётся через 6 с',1500)}}
+function blast(x,z,r,d){boom(x,z,r);beep(70,.35,'sawtooth',.1);EN.forEach(e=>{if(Math.hypot(e.x-x,e.z-z)<r+1.2)hurt(e,d)})}
+function shoot(k){
+  let ang=face,best=null,bd=1e9;
+  EN.forEach(e=>{if(!e.on||e.dead>0)return;const dx=e.x-P.x,dz=e.z-P.z,a=Math.atan2(dx,dz),da=Math.atan2(Math.sin(a-face),Math.cos(a-face)),d=Math.hypot(dx,dz);if(Math.abs(da)<.6&&d<bd){bd=d;best=a}});
+  if(best!==null)ang=best;face=ang;
+  const roc=k!=='ak',m=new THREE.Mesh(roc?rgeo:bgeo,roc?rmat:bmat),off=k==='tank'?3:1.9;
+  m.rotation.y=ang;m.position.set(P.x+Math.sin(ang)*off,1.3,P.z+Math.cos(ang)*off);S.add(m);
+  const sp=roc?26:48;bl.push({m,vx:Math.sin(ang)*sp,vz:Math.cos(ang)*sp,life:roc?1.4:.9,roc,d:k==='ak'?7:k==='baz'?75:95,r:k==='baz'?4:3.6});
+  beep(roc?120:260,roc?.25:.07,'square',.06);
+}
+function updBullets(dt){
+  for(let i=bl.length-1;i>=0;i--){const b=bl[i];b.m.position.x+=b.vx*dt;b.m.position.z+=b.vz*dt;b.life-=dt;
+    const x=b.m.position.x,z=b.m.position.z;let hit=b.life<=0||obs.some(o=>Math.abs(x-o.x)<o.w&&Math.abs(z-o.z)<o.d)||Math.abs(x)>35||Math.abs(z)>35,tgt=null;
+    for(const e of EN)if(e.on&&e.dead<=0&&Math.hypot(e.x-x,e.z-z)<1.8){tgt=e;hit=true}
+    if(hit){S.remove(b.m);bl.splice(i,1);if(b.roc)blast(x,z,b.r,b.d);else if(tgt)hurt(tgt,b.d)}}
+  for(let i=booms.length-1;i>=0;i--){const b=booms[i];b.t+=dt*3;b.m.scale.setScalar(.3+b.r*b.t);b.m.material.opacity=.8*(1-b.t);if(b.t>=1){S.remove(b.m);booms.splice(i,1)}}
+}
+function updEnemy(e,dt,t){
+  if(!e.on)return;
+  if(e.dead>0){e.dead-=dt;if(e.dead<=0){const s=freeSpot({x:P.x,z:P.z,r:28});e.x=s.x;e.z=s.z;e.hp=e.max;e.ph=0;e.ct=5;e.g.visible=true}return}
+  let dx=P.x-e.x,dz=P.z-e.z;const d=Math.hypot(dx,dz)||1;dx/=d;dz/=d;let sp=Math.min(base+2.4,base+boost);e.ct-=dt;
+  if(e.ph===0&&e.ct<=0){e.ph=1;e.tm=.7;say('Reichtangle разгоняется!',900);beep(90,.6,'sawtooth',.1)}
+  if(e.ph===1){sp=0;e.tm-=dt;e.dir={x:dx,z:dz};if(e.tm<=0){e.ph=2;e.tm=1.2}}
+  else if(e.ph===2){sp*=2.2;dx=e.dir.x;dz=e.dir.z;e.tm-=dt;if(e.tm<=0){e.ph=0;e.ct=6.5}}
+  else if(d>6){const a=Math.sin(t*.7+e.max)*.35,c=Math.cos(a),s=Math.sin(a),ox=dx;dx=dx*c-dz*s;dz=ox*s+dz*c}
+  if(form!=='ball'&&d<rad()+1.7)sp=0;
+  e.x+=dx*sp*dt;e.z+=dz*sp*dt;const q={x:e.x,z:e.z};push(q,1.4);e.x=q.x;e.z=q.z;
+  e.g.position.set(e.x,0,e.z);let dy=Math.atan2(dx,dz)-e.g.rotation.y;dy=Math.atan2(Math.sin(dy),Math.cos(dy));e.g.rotation.y+=dy*Math.min(1,dt*8);
+  e.b.position.y=1.6+Math.abs(Math.sin(t*9))*.12*(sp>0?1:0)+(e.ph===1?Math.sin(t*60)*.06:0);
+  e.b.scale.setScalar(1+Math.max(0,e.flash)*1.2);e.flash-=dt;
+  const f=Math.max(.001,e.hp/e.max);e.fl.scale.x=f;e.fl.position.x=-1.25*(1-f);e.bar.rotation.y=-e.g.rotation.y;e.bar.rotation.x=-.55;
+  if(form!=='ball'&&d<rad()+2.2)hurt(e,45*dt);
+  if(form==='ball'&&d<rad()+1.45&&state==='play')end(false);
+}
+
+// ---------- admin ----------
+const items=[['AK-47',()=>give('ak')],['Базука',()=>give('baz')],['Стать Reichtangle',()=>setForm('reich')],['Танк',()=>setForm('tank')],['Обычная Польша',()=>{setForm('ball');give(null)}],['Убрать оружие',()=>give(null)]];
+for(let i=1;i<=5;i++)items.push(['Уровень '+i,()=>startLevel(i)]);
+const ch=$('cheat');ch.innerHTML='<h2>Чит-меню админа</h2>';
+items.forEach(([n,f])=>{const b=document.createElement('button');b.textContent=n;b.onclick=()=>{closeUI();f()};ch.appendChild(b)});
+{const x=document.createElement('button');x.className='x';x.textContent='Закрыть';x.onclick=closeUI;ch.appendChild(x)}
+function closeUI(){paused=false;$('cmd').classList.add('hide');ch.classList.add('hide');$('cin').blur()}
+$('cok').onclick=()=>{const v=$('cin').value.trim().toLowerCase();$('cin').value='';
+  if(v==='/polska'){closeUI();paused=true;ch.classList.remove('hide')}else if(!v)closeUI();else say('Неизвестная команда',1200)};
+$('cin').addEventListener('keydown',e=>{if(e.key==='Enter')$('cok').click();if(e.key==='Escape')closeUI()});
+$('c').addEventListener('pointerdown',e=>{
+  if(state!=='play'||paused)return;
+  const v=new THREE.Vector3(P.x,1,P.z).project(cam),sx=(v.x+1)/2*innerWidth,sy=(1-v.y)/2*innerHeight;
+  if(Math.hypot(e.clientX-sx,e.clientY-sy)<90){const n=performance.now();if(n-lt<420){lt=0;paused=true;$('cmd').classList.remove('hide');setTimeout(()=>$('cin').focus(),50)}else lt=n}
+});
+
+// ---------- loop ----------
+let last=performance.now();
+function loop(now){
+  requestAnimationFrame(loop);
+  const dt=Math.min(.05,(now-last)/1000);last=now;const t=now/1000;
+  if(state==='play'&&!paused){
+    T+=dt;boost+=dt*.05;
+    let mx=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)+jx,mz=(keys.KeyS||keys.ArrowDown?1:0)-(keys.KeyW||keys.ArrowUp?1:0)+jz;
+    const ml=Math.hypot(mx,mz);if(ml>1){mx/=ml;mz/=ml}const moving=ml>.1;
+    if(tired&&stam>.25)tired=false;
+    const dash=dashHeld&&moving&&!tired&&stam>0;
+    if(dash){stam-=dt*.5;if(stam<=0){stam=0;tired=true}}else stam=Math.min(1,stam+dt*.22);
+    const sp=({ball:8,reich:7,tank:5.8})[form]*(dash?1.6:1),k=1-Math.exp(-dt*12);
+    V.x+=(mx*sp-V.x)*k;V.z+=(mz*sp-V.z)*k;P.x+=V.x*dt;P.z+=V.z*dt;push(P,rad());
+    if(moving){let da=Math.atan2(mx,mz)-face;da=Math.atan2(Math.sin(da),Math.cos(da));face+=da*Math.min(1,dt*14)}
+    cd-=dt;const armed=form==='tank'||(form==='ball'&&weapon);
+    if(fireHeld&&armed&&cd<=0){const kd=form==='tank'?'tank':weapon;shoot(kd);cd=kd==='ak'?.11:kd==='baz'?1.1:.9}
+    EN.forEach(e=>updEnemy(e,dt,t));updBullets(dt);
+    for(let i=pick.length-1;i>=0;i--){const p=pick[i];p.rotation.y+=dt*2;p.position.y=1.1+Math.sin(t*3+i)*.2;
+      if(Math.hypot(p.position.x-P.x,p.position.z-P.z)<1.6+rad()*.4){S.remove(p);pick.splice(i,1);got++;beep(700+got*90,.18,'triangle');$('pir').textContent='Пироги '+got+'/'+NP;
+        if(got===NP){const f=freeSpot({x:P.x,z:P.z,r:24});portal.position.set(f.x,0,f.z);portal.visible=true;portalOn=true;say('Выход открыт! Беги к лучу света',2200)}else say('Пирог! Осталось '+(NP-got),900)}}
+    if(portalOn){portal.rotation.y+=dt;if(Math.hypot(portal.position.x-P.x,portal.position.z-P.z)<2.3+rad()*.4)end(true)}
+    $('tm').textContent=fm(T);$('st').style.width=(stam*100)+'%';$('st').style.background=tired?'#e0163f':'#ffd36b';
+  }
+  const hop=Math.abs(Math.sin(t*10))*.28*Math.min(1,Math.hypot(V.x,V.z)/5);
+  pl.position.set(P.x,0,P.z);pl.rotation.y=face;pb.position.y=.9+hop;ak.position.y=.95+Math.sin(t*3)*.06;baz.position.y=1+Math.sin(t*3)*.06;
+  mR.g.position.set(P.x,0,P.z);mR.g.rotation.y=face;mR.b.position.y=1.6+hop*.4;tank.position.set(P.x,0,P.z);tank.rotation.y=face;
+  const sh=EN.some(e=>e.on&&e.ph===1&&e.dead<=0)?(Math.random()-.5)*.4:0,kk=1-Math.exp(-dt*5);
+  cam.position.x+=((P.x+sh)-cam.position.x)*kk;cam.position.z+=((P.z+13)-cam.position.z)*kk;cam.position.y=16;cam.lookAt(cam.position.x,0,cam.position.z-12.5);
+  R.render(S,cam);
+}
+buildWorld(1);applyForm();cam.position.set(0,16,37);requestAnimationFrame(loop);
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+}
+let installPrompt = null;
+const installBtn = document.getElementById('install');
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault();
+  installPrompt = event;
+  installBtn.style.display = 'block';
+});
+installBtn.addEventListener('click', async () => {
+  if (!installPrompt) {
+    say('Открой меню браузера и выбери «Установить приложение»', 2600);
+    return;
+  }
+  installPrompt.prompt();
+  await installPrompt.userChoice;
+  installPrompt = null;
+  installBtn.style.display = 'none';
+});
+window.addEventListener('appinstalled', () => {
+  installBtn.style.display = 'none';
+  say('Игра установлена!', 1800);
+});
+})();
+</script></body></html>

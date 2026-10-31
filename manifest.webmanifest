@@ -1,0 +1,27 @@
+{
+  "id": "./",
+  "name": "Беги, Польша!",
+  "short_name": "Беги, Польша",
+  "description": "Countryballs: собери пироги и найди выход, пока Reichtangle гонится за Польшей.",
+  "lang": "ru",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#12152a",
+  "theme_color": "#12152a",
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
